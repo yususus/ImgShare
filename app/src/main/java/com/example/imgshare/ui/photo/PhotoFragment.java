@@ -1,66 +1,170 @@
 package com.example.imgshare.ui.photo;
 
+import static android.app.Activity.RESULT_OK;
+import static android.content.ContentValues.TAG;
+
+import android.content.Intent;
+import android.database.Cursor;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
-
-import androidx.fragment.app.Fragment;
-
+import android.provider.MediaStore;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.Toast;
 
-import com.example.imgshare.R;
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link PhotoFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
+import com.example.imgshare.databinding.FragmentPhotoBinding;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 public class PhotoFragment extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+    private FragmentPhotoBinding binding;
+    private int  ResultImage = 1;
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
 
-    public PhotoFragment() {
-        // Required empty public constructor
-    }
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        // Inflate the layout for this fragment
+        binding = FragmentPhotoBinding.inflate(inflater, container, false);
+        View root = binding.getRoot();
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment PhotoFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static PhotoFragment newInstance(String param1, String param2) {
-        PhotoFragment fragment = new PhotoFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
+        Button btnselect = binding.select;
+        btnselect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i = new Intent(
+                        Intent.ACTION_PICK,
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                startActivityForResult(i,ResultImage);
+
+            }
+        });
+        return root;
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
+    public void onActivityResult(int requestCode, int resultCode, Intent data){
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == ResultImage && resultCode == RESULT_OK && null != data){
+            Uri selectedImage = data.getData();
+            String [] filePathColumn = {MediaStore.Images.Media.DATA};
+
+            Cursor cursor = getActivity().getContentResolver().query(selectedImage,
+                    filePathColumn, null,null,null);
+            cursor.moveToFirst();
+
+            int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+            String picturePath = cursor.getString(columnIndex);
+            cursor.close();
+
+            ImageView imageView = binding.imgView;
+            imageView.setImageBitmap(BitmapFactory.decodeFile(picturePath));
+
+            Button share = binding.share;
+            share.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    FirebaseStorage storage = FirebaseStorage.getInstance();
+                    StorageReference storageRef = storage.getReference();
+                    StorageReference photoRef = storageRef.child("posts/" + UUID.randomUUID().toString());
+
+                    UploadTask uploadTask = photoRef.putFile(selectedImage);
+
+                    FirebaseAuth auth = FirebaseAuth.getInstance();
+
+                    uploadTask.addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                            Task<Uri> uriTask = taskSnapshot.getStorage().getDownloadUrl();
+                            while(!uriTask.isSuccessful());
+                            Uri dowloadUrl = uriTask.getResult();
+
+                            FirebaseFirestore db = FirebaseFirestore.getInstance();
+                            DocumentReference userRef = db.collection("users").document(auth.getUid());
+                            userRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                                @Override
+                                public void onSuccess(DocumentSnapshot documentSnapshot) {
+                                    String name = documentSnapshot.getString("name");
+
+                                    Map<String,Object> post = new HashMap<>();
+                                    post.put("imageUrl",dowloadUrl.toString());
+                                    post.put("name", name);
+
+                                    List<String> label = new ArrayList<>();
+                                    if(binding.car.isChecked()){
+                                        label.add("Araba");
+                                    }
+                                    if(binding.Football.isChecked()){
+                                        label.add("Futbol");
+                                    }
+                                    if(binding.nature.isChecked()){
+                                        label.add("Doğa");
+                                    }
+                                    if(binding.View.isChecked()){
+                                        label.add("Manzara");
+                                    }
+
+                                    post.put("label", label);
+
+                                    db.collection("posts").document().set(post)
+                                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                @Override
+                                                public void onSuccess(Void unused) {
+                                                    Log.d(TAG,"BAŞARILI BİR ŞEKİLDE YÜKLENDİ");
+                                                    Toast.makeText(getActivity(),"Başarılı yükleme işlemi",Toast.LENGTH_SHORT).show();
+                                                }
+                                            })
+                                            .addOnFailureListener(new OnFailureListener() {
+                                                @Override
+                                                public void onFailure(@NonNull Exception e) {
+                                                    Log.d(TAG,"BAŞARISIZ BİR ŞEKİLDE YÜKLENDİ");
+                                                    Toast.makeText(getActivity(),"Başarısız yükleme işlemi",Toast.LENGTH_SHORT).show();
+                                                }
+                                            });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
         }
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_photo, container, false);
+    public  void onDestroyView(){
+        super.onDestroyView();
+        binding = null;
     }
 }
+
+
+
+
+
+
+
+
+
+

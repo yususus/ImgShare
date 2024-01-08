@@ -17,6 +17,8 @@ import com.example.imgshare.OpenView;
 import com.example.imgshare.R;
 import com.example.imgshare.databinding.FragmentAboutBinding;
 import com.example.imgshare.databinding.FragmentLogoutBinding;
+import com.google.firebase.Firebase;
+import com.google.firebase.auth.FirebaseAuth;
 
 public class LogoutFragment extends Fragment {
     private FragmentLogoutBinding binding;
@@ -31,8 +33,10 @@ public class LogoutFragment extends Fragment {
         btnlogout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(getActivity(), OpenView.class);
-                startActivity(intent);
+                FirebaseAuth.getInstance().signOut();
+
+                startActivity(new Intent(getActivity(), OpenView.class));
+                getActivity().finish();
             }
         });
 
