@@ -30,40 +30,53 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.358" />
 
-    <RadioGroup
-        android:layout_width="334dp"
-        android:layout_height="212dp"
+    <ScrollView
+        android:layout_width="382dp"
+        android:layout_height="227dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.493"
+        app:layout_constraintHorizontal_bias="0.551"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.687">
+        app:layout_constraintVertical_bias="0.682">
 
-        <CheckBox
-            android:id="@+id/car"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="araba" />
+        <LinearLayout
+            android:id="@+id/linearLayout"
+            android:layout_width="382dp"
+            android:layout_height="266dp"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.482"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.526">
 
-        <CheckBox
-            android:id="@+id/nature"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Doga" />
+            <CheckBox
+                android:id="@+id/car"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="araba" />
 
-        <CheckBox
-            android:id="@+id/View"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Manzara" />
+            <CheckBox
+                android:id="@+id/View"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Manzara" />
 
-        <CheckBox
-            android:id="@+id/Football"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Futbol" />
-    </RadioGroup>
+            <CheckBox
+                android:id="@+id/Football"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Futbol" />
+
+            <CheckBox
+                android:id="@+id/nature"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Doga" />
+        </LinearLayout>
+    </ScrollView>
 
     <ImageView
         android:id="@+id/imgView"

@@ -14,20 +14,25 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.example.imgshare.databinding.FragmentPhotoBinding;
+import com.example.imgshare.ui.label.Label;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
@@ -43,12 +48,38 @@ public class PhotoFragment extends Fragment {
     private FragmentPhotoBinding binding;
     private int  ResultImage = 1;
 
+    List<String> firebaseLabelList = new ArrayList<>();
+
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         binding = FragmentPhotoBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
+
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        CollectionReference labelref = db.collection("label");
+        labelref.addSnapshotListener((snapshots,e) ->{
+            if (e != null){
+                return;
+        }
+
+            firebaseLabelList.clear();
+
+            LinearLayout layout = binding.linearLayout;
+
+
+            for(QueryDocumentSnapshot document : snapshots){
+                Label label = document.toObject(Label.class);
+                CheckBox checkBox = new CheckBox(getActivity());
+                checkBox.setText(label.getLabelText());
+                layout.addView(checkBox);
+
+                firebaseLabelList.add(label.getLabelText());
+            }
+        });
+
 
         Button btnselect = binding.select;
         btnselect.setOnClickListener(new View.OnClickListener() {
@@ -62,6 +93,21 @@ public class PhotoFragment extends Fragment {
             }
         });
         return root;
+    }
+    private List<String> getSelectedLabels(){
+        List<String> selectedLabels = new ArrayList<>();
+        LinearLayout layout = binding.linearLayout;
+
+        for(int i= 0; i< layout.getChildCount(); i ++){
+            View view = layout.getChildAt(i);
+            if(view instanceof CheckBox){
+                CheckBox checkBox = (CheckBox) view;
+                if(checkBox.isChecked()){
+                    selectedLabels.add(checkBox.getText().toString());
+                }
+            }
+        }
+        return selectedLabels;
     }
 
     @Override
@@ -112,21 +158,8 @@ public class PhotoFragment extends Fragment {
                                     post.put("imageUrl",dowloadUrl.toString());
                                     post.put("name", name);
 
-                                    List<String> label = new ArrayList<>();
-                                    if(binding.car.isChecked()){
-                                        label.add("Araba");
-                                    }
-                                    if(binding.Football.isChecked()){
-                                        label.add("Futbol");
-                                    }
-                                    if(binding.nature.isChecked()){
-                                        label.add("Doğa");
-                                    }
-                                    if(binding.View.isChecked()){
-                                        label.add("Manzara");
-                                    }
-
-                                    post.put("label", label);
+                                    List<String> selectedLabels = getSelectedLabels();
+                                    post.put("label", selectedLabels);
 
                                     db.collection("posts").document().set(post)
                                             .addOnSuccessListener(new OnSuccessListener<Void>() {
